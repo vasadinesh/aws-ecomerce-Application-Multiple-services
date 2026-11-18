@@ -8,6 +8,7 @@ pipeline {
     }
 
     stages {
+
         stage('Git Checkout') {
             steps {
                 git branch: 'main',
@@ -18,7 +19,9 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    sudo yum install -y git python3 python3-pip nginx
+                    sudo apt-get update
+                    sudo apt-get install -y git python3 python3-pip python3-venv nginx
+
                     python3 -m venv backend/venv
                     backend/venv/bin/pip install --upgrade pip
                     backend/venv/bin/pip install -r backend/requirements.txt
@@ -38,11 +41,13 @@ pipeline {
             steps {
                 sh '''
                     sudo mkdir -p ${APP_DIR}
-                    sudo cp -r backend frontend ${APP_DIR}/
+
+                    tar --exclude='venv' -cf - backend frontend | sudo tar -xf - -C ${APP_DIR}
+
                     sudo chown -R jenkins:jenkins ${APP_DIR}
 
-                    sudo mkdir -p /usr/share/nginx/html
-                    sudo cp -r frontend/* /usr/share/nginx/html/
+                    sudo mkdir -p /var/www/html
+                    sudo cp -r frontend/* /var/www/html/
 
                     sudo systemctl enable nginx
                     sudo systemctl restart nginx
@@ -55,6 +60,7 @@ pipeline {
         success {
             echo 'E-commerce application deployed successfully!'
         }
+
         failure {
             echo 'Deployment failed. Check Jenkins console output.'
         }
